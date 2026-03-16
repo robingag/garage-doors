@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Garage Door Controller</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+      z-index: -1;
+    }
+
+    /* Audi rings - TOP center */
+    .audi-rings {
+      position: fixed;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+
+    .audi-rings img {
+      width: 300px;
+      height: auto;
+      opacity: 0.85;
+    }
+
+    .doors-container {
+      display: flex;
+      gap: 80px;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      margin-top: 100px;
+    }
+
+    .door-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .door-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #0077c8;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+    }
+
+    .door-ring {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      padding: 5px;
+      background: #ff6600;
+      transition: all 0.6s ease;
+      box-shadow: 0 0 25px rgba(255, 102, 0, 0.35), 0 0 50px rgba(255, 102, 0, 0.12);
+    }
+
+    .door-ring.closed {
+      box-shadow: 0 0 30px rgba(255, 102, 0, 0.4), 0 0 60px rgba(255, 102, 0, 0.15);
+    }
+
+    .door-ring.open {
+      background: #ff4400;
+      box-shadow: 0 0 30px rgba(255, 68, 0, 0.4), 0 0 60px rgba(255, 68, 0, 0.15);
+    }
+
+    .door-ring.moving {
+      box-shadow: 0 0 40px rgba(255, 102, 0, 0.5), 0 0 80px rgba(255, 102, 0, 0.2);
+    }
+
+    .door-btn {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: none;
+      background: radial-gradient(circle at 40% 35%, #1e1e1e, #0a0a0a);
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 3px 6px rgba(255,255,255,0.06), inset 0 -3px 6px rgba(0,0,0,0.5);
+    }
+
+    .door-btn:hover {
+      background: radial-gradient(circle at 40% 35%, #252525, #0e0e0e);
+    }
+
+    .door-btn:active {
+      transform: scale(0.95);
+      box-shadow: inset 0 3px 10px rgba(0,0,0,0.5);
+    }
+
+    .door-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      opacity: 0;
+      transform: scale(0.5);
+      transition: all 0.5s ease;
+    }
+
+    .door-btn.clicked::after {
+      opacity: 1;
+      transform: scale(1);
+      animation: ripple 0.6s ease-out forwards;
+    }
+
+    @keyframes ripple {
+      0% { opacity: 0.4; transform: scale(0.5); }
+      100% { opacity: 0; transform: scale(1.2); }
+    }
+
+    .door-icon {
+      width: 55px;
+      height: 55px;
+      transition: all 0.3s ease;
+    }
+
+    .door-icon svg {
+      width: 100%;
+      height: 100%;
+      color: #0077c8;
+      transition: all 0.5s ease;
+      filter: drop-shadow(0 0 6px rgba(0,119,200,0.3));
+    }
+
+    .door-ring.closed .door-icon svg { color: #0099e6; filter: drop-shadow(0 0 12px rgba(0,119,200,0.5)); }
+    .door-ring.open .door-icon svg { color: #00aaff; filter: drop-shadow(0 0 12px rgba(0,170,255,0.5)); }
+    .door-ring.moving .door-icon svg { color: #0077c8; filter: drop-shadow(0 0 12px rgba(0,119,200,0.5)); }
+
+    .door-status {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #0077c8;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      transition: all 0.5s ease;
+    }
+
+    .door-status.closed { color: #0099e6; text-shadow: 0 0 10px rgba(0,119,200,0.3); }
+    .door-status.open { color: #00aaff; text-shadow: 0 0 10px rgba(0,170,255,0.3); }
+    .door-status.moving { color: #0077c8; text-shadow: 0 0 10px rgba(0,119,200,0.3); animation: textPulse 1s infinite; }
+
+    @keyframes textPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Connection indicator */
+    .connection-indicator {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: #0077c8;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .conn-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff4444;
+      transition: all 0.5s ease;
+    }
+
+    .conn-dot.connected {
+      background: #ff6600;
+      box-shadow: 0 0 8px #ff6600, 0 0 16px rgba(255,102,0,0.3);
+      animation: connPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes connPulse {
+      0%, 100% { box-shadow: 0 0 8px #ff6600, 0 0 16px rgba(255,102,0,0.3); }
+      50% { box-shadow: 0 0 12px #ff6600, 0 0 24px rgba(255,102,0,0.4); }
+    }
+
+    /* Settings gear */
+    .settings-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.15);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0,119,200,0.3);
+      color: #0077c8;
+      font-size: 1.3rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .settings-btn:hover {
+      background: rgba(0,119,200,0.15);
+      color: #00aaff;
+      transform: rotate(90deg);
+      border-color: rgba(0,119,200,0.5);
+    }
+
+    /* PIN modal */
+    .pin-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(10px);
+      z-index: 99;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pin-overlay.visible { display: flex; }
+
+    .pin-panel {
+      background: linear-gradient(135deg, #111, #161616);
+      border-radius: 20px;
+      padding: 35px 40px;
+      border: 1px solid rgba(255,102,0,0.2);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+      animation: slideUp 0.3s ease;
+      text-align: center;
+    }
+
+    .pin-panel h3 {
+      margin-bottom: 8px;
+      font-size: 1rem;
+      color: #0077c8;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .pin-panel p {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 24px;
+    }
+
+    .pin-inputs {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .pin-inputs input {
+      width: 52px;
+      height: 60px;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      border-radius: 12px;
+      border: 2px solid rgba(0,119,200,0.3);
+      background: rgba(0,0,0,0.4);
+      color: #0077c8;
+      caret-color: #ff6600;
+      transition: all 0.3s ease;
+      -moz-appearance: textfield;
+    }
+
+    .pin-inputs input::-webkit-outer-spin-button,
+    .pin-inputs input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .pin-inputs input:focus {
+      outline: none;
+      border-color: #ff6600;
+      box-shadow: 0 0 15px rgba(255,102,0,0.2);
+    }
+
+    .pin-inputs input.error {
+      border-color: #ff2222;
+      box-shadow: 0 0 15px rgba(255,34,34,0.3);
+      animation: pinShake 0.4s ease;
+    }
+
+    @keyframes pinShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-5px); }
+      80% { transform: translateX(5px); }
+    }
+
+    .pin-error-msg {
+      font-size: 0.75rem;
+      color: #ff2222;
+      margin-bottom: 12px;
+      min-height: 18px;
+    }
+
+    .pin-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .btn-pin-cancel {
+      padding: 10px 24px;
+      background: rgba(0,0,0,0.15);
+      color: rgba(255,255,255,0.5);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-pin-cancel:hover {
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+    }
+
+    /* Gear panel (QR code only) */
+    .gear-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .gear-overlay.visible { display: flex; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .gear-panel {
+      background: linear-gradient(135deg, #111, #161616);
+      border-radius: 20px;
+      padding: 35px;
+      border: 1px solid rgba(255,102,0,0.2);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+      animation: slideUp 0.3s ease;
+      text-align: center;
+    }
+
+    .gear-panel h3 {
+      margin-bottom: 20px;
+      font-size: 1rem;
+      color: #0077c8;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    #qrcode {
+      background: #fff;
+      padding: 10px;
+      border-radius: 10px;
+      display: inline-block;
+      margin-bottom: 16px;
+    }
+
+    #qrcode canvas { display: block; }
+
+    .qr-label {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+    }
+
+    .btn-close-gear {
+      padding: 10px 30px;
+      background: rgba(0,0,0,0.15);
+      color: rgba(255,255,255,0.5);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-close-gear:hover {
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Audi rings logo - TOP center -->
+  <div class="audi-rings">
+    <img src="audi-logo.png" alt="Audi">
+  </div>
+
+  <!-- Connection indicator -->
+  <div class="connection-indicator">
+    <div class="conn-dot" id="connDot"></div>
+    <span id="connText">Deconnecte</span>
+  </div>
+
+  <!-- 2 round buttons -->
+  <div class="doors-container">
+    <div class="door-wrapper">
+      <span class="door-label">Porte 1</span>
+      <div class="door-ring" id="doorRing1">
+        <button class="door-btn" id="doorBtn1" onclick="handleClick(1)">
+          <div class="door-icon">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </button>
+      </div>
+      <span class="door-status" id="status1">--</span>
+    </div>
+
+    <div class="door-wrapper">
+      <span class="door-label">Porte 2</span>
+      <div class="door-ring" id="doorRing2">
+        <button class="door-btn" id="doorBtn2" onclick="handleClick(2)">
+          <div class="door-icon">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </button>
+      </div>
+      <span class="door-status" id="status2">--</span>
+    </div>
+  </div>
+
+  <!-- Settings button -->
+  <button class="settings-btn" onclick="showPinModal()">&#9881;</button>
+
+  <!-- PIN modal -->
+  <div class="pin-overlay" id="pinOverlay" onclick="closePinModal(event)">
+    <div class="pin-panel">
+      <h3>&#128274; Acces protege</h3>
+      <p>Entrez le code NIP a 4 chiffres</p>
+      <div class="pin-inputs">
+        <input type="number" id="pin1" maxlength="1" min="0" max="9" autocomplete="off">
+        <input type="number" id="pin2" maxlength="1" min="0" max="9" autocomplete="off">
+        <input type="number" id="pin3" maxlength="1" min="0" max="9" autocomplete="off">
+        <input type="number" id="pin4" maxlength="1" min="0" max="9" autocomplete="off">
+      </div>
+      <div class="pin-error-msg" id="pinError"></div>
+      <div class="pin-buttons">
+        <button class="btn-pin-cancel" onclick="hidePinModal()">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gear panel (QR code only) -->
+  <div class="gear-overlay" id="gearOverlay" onclick="closeGear(event)">
+    <div class="gear-panel">
+      <h3>QR Code d'acces</h3>
+      <div id="qrcode"></div>
+      <div class="qr-label">Scannez pour acceder a cette page</div>
+      <button class="btn-close-gear" onclick="closeGearPanel()">Fermer</button>
+    </div>
+  </div>
+
+  <!-- QR Code library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+  <!-- MQTT.js via CDN -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+  <script>
+    let client = null;
+    let isConnected = false;
+    const CORRECT_PIN = '5082';
+
+    const statusLabels = {
+      'open': 'Ouverte',
+      'closed': 'Fermee',
+      'moving': 'En mouvement',
+      'unknown': '--'
+    };
+
+    // ===== QR Code =====
+    window.addEventListener('load', () => {
+      new QRCode(document.getElementById('qrcode'), {
+        text: window.location.href,
+        width: 150,
+        height: 150,
+        colorDark: '#0a0a0a',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      // Auto-connect MQTT with saved or default config
+      const saved = localStorage.getItem('mqttConfig');
+      if (saved) {
+        const config = JSON.parse(saved);
+        autoConnect(config.host, config.port, config.user, config.pass);
+      }
+    });
+
+    // ===== PIN Protection =====
+    function showPinModal() {
+      document.getElementById('pinOverlay').classList.add('visible');
+      document.getElementById('pinError').textContent = '';
+      for (let i = 1; i <= 4; i++) {
+        document.getElementById('pin' + i).value = '';
+        document.getElementById('pin' + i).classList.remove('error');
+      }
+      setTimeout(() => document.getElementById('pin1').focus(), 100);
+    }
+
+    function hidePinModal() {
+      document.getElementById('pinOverlay').classList.remove('visible');
+    }
+
+    function closePinModal(e) {
+      if (e.target === e.currentTarget) hidePinModal();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const pinInputs = [
+        document.getElementById('pin1'),
+        document.getElementById('pin2'),
+        document.getElementById('pin3'),
+        document.getElementById('pin4')
+      ];
+
+      pinInputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+          let val = e.target.value;
+          if (val.length > 1) val = val.slice(-1);
+          e.target.value = val;
+
+          if (val && index < 3) pinInputs[index + 1].focus();
+
+          const enteredPin = pinInputs.map(i => i.value).join('');
+          if (enteredPin.length === 4) validatePin(enteredPin, pinInputs);
+        });
+
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace' && !e.target.value && index > 0) {
+            pinInputs[index - 1].focus();
+          }
+        });
+      });
+    });
+
+    function validatePin(pin, pinInputs) {
+      if (pin === CORRECT_PIN) {
+        hidePinModal();
+        document.getElementById('gearOverlay').classList.add('visible');
+      } else {
+        document.getElementById('pinError').textContent = 'Code incorrect';
+        pinInputs.forEach(input => {
+          input.classList.add('error');
+          input.value = '';
+        });
+        setTimeout(() => {
+          pinInputs.forEach(input => input.classList.remove('error'));
+          pinInputs[0].focus();
+        }, 500);
+      }
+    }
+
+    // ===== Gear Panel =====
+    function closeGear(e) {
+      if (e.target === e.currentTarget) closeGearPanel();
+    }
+
+    function closeGearPanel() {
+      document.getElementById('gearOverlay').classList.remove('visible');
+    }
+
+    // ===== Door Controls =====
+    function handleClick(doorNum) {
+      const btn = document.getElementById('doorBtn' + doorNum);
+      btn.classList.add('clicked');
+      setTimeout(() => btn.classList.remove('clicked'), 600);
+      sendCmd('door' + doorNum, 'TOGGLE');
+    }
+
+    function updateDoorUI(doorNum, status) {
+      const ring = document.getElementById('doorRing' + doorNum);
+      const label = document.getElementById('status' + doorNum);
+      ring.className = 'door-ring ' + status;
+      label.textContent = statusLabels[status] || status;
+      label.className = 'door-status ' + status;
+    }
+
+    function updateConnectionUI(connected) {
+      const dot = document.getElementById('connDot');
+      const text = document.getElementById('connText');
+      if (connected) {
+        dot.classList.add('connected');
+        text.textContent = 'MQTT connecte';
+      } else {
+        dot.classList.remove('connected');
+        text.textContent = 'Deconnecte';
+      }
+    }
+
+    function sendCmd(door, action) {
+      if (!client || !isConnected) return;
+      client.publish(`garage/${door}/cmd`, action);
+    }
+
+    function autoConnect(host, port, user, pass) {
+      if (!host) return;
+      const url = `ws://${host}:${port}/mqtt`;
+      const options = {
+        clientId: 'garage-web-' + Math.random().toString(16).substr(2, 8),
+        clean: true,
+        reconnectPeriod: 5000
+      };
+      if (user) { options.username = user; options.password = pass; }
+
+      client = mqtt.connect(url, options);
+
+      client.on('connect', () => {
+        isConnected = true;
+        updateConnectionUI(true);
+        client.subscribe('garage/door1/status');
+        client.subscribe('garage/door2/status');
+      });
+
+      client.on('message', (topic, message) => {
+        const status = message.toString().trim();
+        if (topic === 'garage/door1/status') updateDoorUI(1, status);
+        else if (topic === 'garage/door2/status') updateDoorUI(2, status);
+      });
+
+      client.on('error', () => {});
+      client.on('close', () => { isConnected = false; updateConnectionUI(false); });
+    }
+  </script>
+
+</body>
+</html>
