@@ -53,7 +53,10 @@
       align-items: center;
       justify-content: center;
       padding: 40px;
-      margin-top: 100px;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
     }
 
     .door-wrapper {
@@ -69,6 +72,21 @@
       color: #0077c8;
       text-transform: uppercase;
       letter-spacing: 4px;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .door-label em {
+      font-style: italic;
+      font-weight: 900;
+      font-size: 1.4rem;
+      letter-spacing: 3px;
+      display: inline-block;
+      transform: skewX(-12deg);
+      background: linear-gradient(135deg, #00aaff, #0077c8, #00ddff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 6px rgba(0,119,200,0.4));
     }
 
     .door-ring {
@@ -140,23 +158,18 @@
       100% { opacity: 0; transform: scale(1.2); }
     }
 
-    .door-icon {
-      width: 55px;
-      height: 55px;
-      transition: all 0.3s ease;
-    }
-
-    .door-icon svg {
-      width: 100%;
-      height: 100%;
-      color: #0077c8;
+    .door-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #0077c8;
+      box-shadow: 0 0 16px 4px rgba(0,119,200,0.6), 0 0 40px 8px rgba(0,119,200,0.3), 0 0 60px 12px rgba(0,119,200,0.15);
       transition: all 0.5s ease;
-      filter: drop-shadow(0 0 6px rgba(0,119,200,0.3));
     }
 
-    .door-ring.closed .door-icon svg { color: #0099e6; filter: drop-shadow(0 0 12px rgba(0,119,200,0.5)); }
-    .door-ring.open .door-icon svg { color: #00aaff; filter: drop-shadow(0 0 12px rgba(0,170,255,0.5)); }
-    .door-ring.moving .door-icon svg { color: #0077c8; filter: drop-shadow(0 0 12px rgba(0,119,200,0.5)); }
+    .door-ring.closed .door-dot { background: #0099e6; box-shadow: 0 0 18px 5px rgba(0,119,200,0.7), 0 0 45px 10px rgba(0,119,200,0.35), 0 0 70px 15px rgba(0,119,200,0.15); }
+    .door-ring.open .door-dot { background: #00aaff; box-shadow: 0 0 18px 5px rgba(0,170,255,0.7), 0 0 45px 10px rgba(0,170,255,0.35), 0 0 70px 15px rgba(0,170,255,0.15); }
+    .door-ring.moving .door-dot { background: #0077c8; box-shadow: 0 0 18px 5px rgba(0,119,200,0.7), 0 0 45px 10px rgba(0,119,200,0.35), 0 0 70px 15px rgba(0,119,200,0.15); }
 
     .door-status {
       font-size: 0.8rem;
@@ -444,38 +457,22 @@
   <!-- 2 round buttons -->
   <div class="doors-container">
     <div class="door-wrapper">
-      <span class="door-label">Porte 1</span>
       <div class="door-ring" id="doorRing1">
         <button class="door-btn" id="doorBtn1" onclick="handleClick(1)">
-          <div class="door-icon">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </div>
+          <div class="door-dot"></div>
         </button>
       </div>
+      <span class="door-label">Ti <em>Q</em></span>
       <span class="door-status" id="status1">--</span>
     </div>
 
     <div class="door-wrapper">
-      <span class="door-label">Porte 2</span>
       <div class="door-ring" id="doorRing2">
         <button class="door-btn" id="doorBtn2" onclick="handleClick(2)">
-          <div class="door-icon">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </div>
+          <div class="door-dot"></div>
         </button>
       </div>
+      <span class="door-label">Ti <em>Jean</em></span>
       <span class="door-status" id="status2">--</span>
     </div>
   </div>
