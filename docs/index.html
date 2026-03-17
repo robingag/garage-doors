@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Garage Door Controller</title>
   <style>
+    @import url('https://fonts.cdnfonts.com/css/eurostile-extended');
+  </style>
+  <style>
     * {
       margin: 0;
       padding: 0;
@@ -35,26 +38,26 @@
     /* Audi rings - TOP center */
     .audi-rings {
       position: fixed;
-      top: 30px;
+      top: 15px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 10;
     }
 
     .audi-rings img {
-      width: 300px;
+      width: 350px;
       height: auto;
       opacity: 0.85;
     }
 
     .doors-container {
       display: flex;
-      gap: 80px;
+      gap: 60px;
       align-items: center;
       justify-content: center;
       padding: 40px;
       position: fixed;
-      bottom: 20px;
+      bottom: 30px;
       left: 50%;
       transform: translateX(-50%);
     }
@@ -63,7 +66,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 24px;
+      gap: 0px;
     }
 
     .door-label {
@@ -73,103 +76,99 @@
       text-transform: uppercase;
       letter-spacing: 4px;
       font-family: 'Segoe UI', Roboto, sans-serif;
+      margin-top: -15px;
     }
 
     .door-label em {
       font-style: italic;
+      font-family: 'Eurostile Extended', sans-serif;
       font-weight: 900;
-      font-size: 1.4rem;
+      font-size: 2rem;
       letter-spacing: 3px;
       display: inline-block;
-      transform: skewX(-12deg);
-      background: linear-gradient(135deg, #00aaff, #0077c8, #00ddff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      filter: drop-shadow(0 0 6px rgba(0,119,200,0.4));
+      color: #ff6600;
+      text-shadow: 0 0 10px rgba(255,102,0,0.8), 0 0 20px rgba(255,102,0,0.5), 0 0 40px rgba(255,102,0,0.3), 0 0 60px rgba(255,68,0,0.2);
     }
 
+    /* HUD Sci-Fi button */
     .door-ring {
-      width: 180px;
-      height: 180px;
-      border-radius: 50%;
-      padding: 5px;
-      background: #ff6600;
+      width: 220px;
+      height: 220px;
+      position: relative;
       transition: all 0.6s ease;
-      box-shadow: 0 0 25px rgba(255, 102, 0, 0.35), 0 0 50px rgba(255, 102, 0, 0.12);
+      filter: drop-shadow(0 0 15px rgba(0,119,200,0.4));
     }
 
-    .door-ring.closed {
-      box-shadow: 0 0 30px rgba(255, 102, 0, 0.4), 0 0 60px rgba(255, 102, 0, 0.15);
-    }
-
-    .door-ring.open {
-      background: #ff4400;
-      box-shadow: 0 0 30px rgba(255, 68, 0, 0.4), 0 0 60px rgba(255, 68, 0, 0.15);
-    }
-
-    .door-ring.moving {
-      box-shadow: 0 0 40px rgba(255, 102, 0, 0.5), 0 0 80px rgba(255, 102, 0, 0.2);
-    }
+    .door-ring.closed { filter: drop-shadow(0 0 20px rgba(0,119,200,0.5)); }
+    .door-ring.open { filter: drop-shadow(0 0 22px rgba(0,170,255,0.5)); }
+    .door-ring.moving { filter: drop-shadow(0 0 28px rgba(0,119,200,0.6)); }
 
     .door-btn {
       width: 100%;
       height: 100%;
-      border-radius: 50%;
       border: none;
-      background: radial-gradient(circle at 40% 35%, #1e1e1e, #0a0a0a);
+      background: transparent;
       cursor: pointer;
       position: relative;
-      transition: all 0.3s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: inset 0 3px 6px rgba(255,255,255,0.06), inset 0 -3px 6px rgba(0,0,0,0.5);
+      transition: all 0.3s ease;
     }
 
-    .door-btn:hover {
-      background: radial-gradient(circle at 40% 35%, #252525, #0e0e0e);
-    }
+    .door-btn:active { transform: scale(0.96); }
 
-    .door-btn:active {
-      transform: scale(0.95);
-      box-shadow: inset 0 3px 10px rgba(0,0,0,0.5);
-    }
-
-    .door-btn::after {
-      content: '';
+    /* HUD ring image - mix blue + orange tint on bright parts */
+    .hud-ring-img {
       position: absolute;
       inset: 0;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.1);
-      opacity: 0;
-      transform: scale(0.5);
-      transition: all 0.5s ease;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      transition: all 0.3s ease;
+      filter: saturate(2) brightness(0.75) hue-rotate(15deg) contrast(1.4) sepia(0.35);
     }
 
-    .door-btn.clicked::after {
-      opacity: 1;
-      transform: scale(1);
-      animation: ripple 0.6s ease-out forwards;
+    /* Slow rotation animation */
+    .hud-ring-img {
+      animation: hudSpin 30s linear infinite;
+      filter: saturate(2) brightness(0.75) hue-rotate(15deg) contrast(1.4) sepia(0.35);
     }
 
-    @keyframes ripple {
-      0% { opacity: 0.4; transform: scale(0.5); }
-      100% { opacity: 0; transform: scale(1.2); }
+    .door-ring.moving .hud-ring-img {
+      animation: hudSpin 4s linear infinite;
     }
 
+    @keyframes hudSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Pulse animation on click */
+    .door-btn.clicked .hud-ring-img {
+      animation: hudPulse 0.6s ease-out, hudSpin 30s linear infinite;
+    }
+
+    @keyframes hudPulse {
+      0% { filter: brightness(1); }
+      50% { filter: brightness(1.8); }
+      100% { filter: brightness(1); }
+    }
+
+    /* Center dot */
     .door-dot {
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
       border-radius: 50%;
       background: #0077c8;
-      box-shadow: 0 0 16px 4px rgba(0,119,200,0.6), 0 0 40px 8px rgba(0,119,200,0.3), 0 0 60px 12px rgba(0,119,200,0.15);
+      box-shadow: 0 0 12px 3px rgba(0,119,200,0.6), 0 0 30px 6px rgba(0,119,200,0.25), 0 0 50px 10px rgba(0,119,200,0.1);
       transition: all 0.5s ease;
+      z-index: 2;
     }
 
-    .door-ring.closed .door-dot { background: #0099e6; box-shadow: 0 0 18px 5px rgba(0,119,200,0.7), 0 0 45px 10px rgba(0,119,200,0.35), 0 0 70px 15px rgba(0,119,200,0.15); }
-    .door-ring.open .door-dot { background: #00aaff; box-shadow: 0 0 18px 5px rgba(0,170,255,0.7), 0 0 45px 10px rgba(0,170,255,0.35), 0 0 70px 15px rgba(0,170,255,0.15); }
-    .door-ring.moving .door-dot { background: #0077c8; box-shadow: 0 0 18px 5px rgba(0,119,200,0.7), 0 0 45px 10px rgba(0,119,200,0.35), 0 0 70px 15px rgba(0,119,200,0.15); }
+    .door-ring.closed .door-dot { background: #0099e6; box-shadow: 0 0 14px 4px rgba(0,119,200,0.7), 0 0 35px 8px rgba(0,119,200,0.3); }
+    .door-ring.open .door-dot { background: #00aaff; box-shadow: 0 0 14px 4px rgba(0,170,255,0.7), 0 0 35px 8px rgba(0,170,255,0.3); }
+    .door-ring.moving .door-dot { background: #0077c8; box-shadow: 0 0 14px 4px rgba(0,119,200,0.7), 0 0 35px 8px rgba(0,119,200,0.3); }
 
     .door-status {
       font-size: 0.8rem;
@@ -439,6 +438,61 @@
       background: rgba(255,255,255,0.05);
       color: #fff;
     }
+
+    /* Mobile responsive */
+    @media (max-width: 500px) {
+      .audi-rings img {
+        width: 220px;
+      }
+
+      .audi-rings {
+        top: 20px;
+      }
+
+      .doors-container {
+        flex-direction: row;
+        gap: 20px;
+        bottom: auto;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        padding: 20px;
+      }
+
+      .door-ring {
+        width: 150px;
+        height: 150px;
+      }
+
+      .door-label em {
+        font-size: 1.4rem;
+      }
+
+      .door-label {
+        font-size: 0.7rem;
+        letter-spacing: 3px;
+        margin-top: -10px;
+      }
+
+      .door-status {
+        font-size: 0.65rem;
+      }
+
+      .settings-btn {
+        bottom: auto;
+        top: 20px;
+        left: 15px;
+        right: auto;
+        width: 38px;
+        height: 38px;
+        font-size: 1.1rem;
+      }
+
+      .connection-indicator {
+        top: 12px;
+        right: 12px;
+        font-size: 0.6rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -459,6 +513,7 @@
     <div class="door-wrapper">
       <div class="door-ring" id="doorRing1">
         <button class="door-btn" id="doorBtn1" onclick="handleClick(1)">
+          <img src="hud-ring.png" alt="" class="hud-ring-img">
           <div class="door-dot"></div>
         </button>
       </div>
@@ -469,6 +524,7 @@
     <div class="door-wrapper">
       <div class="door-ring" id="doorRing2">
         <button class="door-btn" id="doorBtn2" onclick="handleClick(2)">
+          <img src="hud-ring.png" alt="" class="hud-ring-img">
           <div class="door-dot"></div>
         </button>
       </div>
